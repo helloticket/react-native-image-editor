@@ -47,6 +47,8 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.infer.annotation.Assertions;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.common.ReactConstants;
 
 /**
@@ -65,7 +67,7 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
   private static final String TEMP_FILE_PREFIX = "ReactNative_cropped_image_";
 
   /** Compress quality of the output file. */
-  private static final int COMPRESS_QUALITY = 90;
+  private static final int COMPRESS_QUALITY = 100;
 
   @SuppressLint("InlinedApi") private static final String[] EXIF_ATTRIBUTES = new String[] {
     ExifInterface.TAG_APERTURE,
@@ -182,6 +184,8 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
       throw new JSApplicationIllegalArgumentException("Please specify a URI");
     }
 
+    double quality = options.hasKey("quality") ? options.getDouble("quality") : 1;
+
     CropTask cropTask = new CropTask(
         getReactApplicationContext(),
         uri,
@@ -189,13 +193,16 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         (int) offset.getDouble("y"),
         (int) size.getDouble("width"),
         (int) size.getDouble("height"),
+            quality,
         promise);
+
     if (options.hasKey("displaySize")) {
       ReadableMap targetSize = options.getMap("displaySize");
       cropTask.setTargetSize(
         (int) targetSize.getDouble("width"),
         (int) targetSize.getDouble("height"));
     }
+
     cropTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
   }
 
@@ -208,6 +215,7 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
     final int mHeight;
     int mTargetWidth = 0;
     int mTargetHeight = 0;
+    double mQuality = 1;
     final Promise mPromise;
 
     private CropTask(
@@ -217,6 +225,7 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         int y,
         int width,
         int height,
+        double quality,
         Promise promise) {
       super(context);
       if (x < 0 || y < 0 || width <= 0 || height <= 0) {
@@ -230,6 +239,7 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
       mWidth = width;
       mHeight = height;
       mPromise = promise;
+      mQuality = quality;
     }
 
     public void setTargetSize(int width, int height) {
@@ -276,13 +286,17 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         }
 
         File tempFile = createTempFile(mContext, mimeType);
-        writeCompressedBitmapToFile(cropped, mimeType, tempFile);
+        writeCompressedBitmapToFile(cropped, mimeType, tempFile, mQuality);
 
         if (mimeType.equals("image/jpeg")) {
           copyExif(mContext, Uri.parse(mUri), tempFile);
         }
 
-        mPromise.resolve(Uri.fromFile(tempFile).toString());
+        WritableMap response = new WritableNativeMap();
+        response.putString("uri", Uri.fromFile(tempFile).toString());
+        response.putInt("width", cropped.getWidth());
+        response.putInt("height", cropped.getHeight());
+        mPromise.resolve(response);
       } catch (Exception e) {
         mPromise.reject(e);
       }
@@ -449,11 +463,11 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
     return Bitmap.CompressFormat.JPEG;
   }
 
-  private static void writeCompressedBitmapToFile(Bitmap cropped, String mimeType, File tempFile)
+  private static void writeCompressedBitmapToFile(Bitmap cropped, String mimeType, File tempFile, double quality)
       throws IOException {
     OutputStream out = new FileOutputStream(tempFile);
     try {
-      cropped.compress(getCompressFormatForType(mimeType), COMPRESS_QUALITY, out);
+      cropped.compress(getCompressFormatForType(mimeType), (int)quality*COMPRESS_QUALITY, out);
     } finally {
       if (out != null) {
         out.close();
