@@ -80,14 +80,14 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
     
     if([extension isEqualToString:@"png"]){
       imageData = UIImagePNGRepresentation(croppedImage);
-      path = [RNCFileSystem generatePathInDirectory:[[RNCFileSystem cacheDirectoryPath] stringByAppendingPathComponent:@"ReactNative_cropped_image_"] withExtension:@".png"];
+      path = [RNCFileSystem generatePathInDirectory:[[RNCFileSystem cacheDirectoryPath] stringByAppendingPathComponent:@"HelloTicket_cropped_image_"] withExtension:@".png"];
     }
     else{
         float quality = [cropData[@"quality"] floatValue];
         quality = quality <= 0 ? 1 : quality;
         
         imageData = UIImageJPEGRepresentation(croppedImage, quality);
-      path = [RNCFileSystem generatePathInDirectory:[[RNCFileSystem cacheDirectoryPath] stringByAppendingPathComponent:@"ReactNative_cropped_image_"] withExtension:@".jpg"];
+      path = [RNCFileSystem generatePathInDirectory:[[RNCFileSystem cacheDirectoryPath] stringByAppendingPathComponent:@"HelloTicket_cropped_image_"] withExtension:@".jpg"];
     }
 
     NSError *writeError;
