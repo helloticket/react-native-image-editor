@@ -215,7 +215,7 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
     final int mHeight;
     int mTargetWidth = 0;
     int mTargetHeight = 0;
-    double mQuality = 1;
+    double mQuality = 1.0;
     final Promise mPromise;
 
     private CropTask(
@@ -467,7 +467,9 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
       throws IOException {
     OutputStream out = new FileOutputStream(tempFile);
     try {
-      cropped.compress(getCompressFormatForType(mimeType), (int)quality*COMPRESS_QUALITY, out);
+      int newQuality = (int)quality * COMPRESS_QUALITY;
+      newQuality = newQuality <= 0 ? 90 : newQuality;
+      cropped.compress(getCompressFormatForType(mimeType), newQuality, out);
     } finally {
       if (out != null) {
         out.close();
